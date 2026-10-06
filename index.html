@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Radar de Pools Estáveis</title>
+  <meta name="description" content="Monitor on-chain das maiores pools de liquidez concentrada de stablecoins em Uniswap v3, Uniswap v4 e Orca, com análise técnica e ranges conservadores.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect x='1' y='1' width='38' height='38' rx='9' fill='%230f1a2b'/%3E%3Cpath d='M8 20h24' stroke='%23b7791f' stroke-width='2.5' stroke-dasharray='3 2.5'/%3E%3Cpath d='M13 11v18M27 11v18' stroke='%23fff' stroke-width='2.5'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="1" y="1" width="38" height="38" rx="9" class="mark-bg"/>
+          <path d="M8 20h24" class="mark-peg"/>
+          <path d="M13 11v18M27 11v18" class="mark-range"/>
+          <path d="M13 11h3M13 29h3M27 11h-3M27 29h-3" class="mark-range"/>
+          <circle cx="21.5" cy="18.5" r="3" class="mark-dot"/>
+        </svg>
+        <div>
+          <h1>Radar de Pools Estáveis</h1>
+          <p class="tagline">Liquidez concentrada em stablecoins · leitura on-chain ao vivo</p>
+        </div>
+      </div>
+      <div class="status" aria-live="polite">
+        <div class="chains" id="chain-status"></div>
+        <div class="refresh">
+          <button type="button" id="btn-refresh" class="btn-primary">Atualizar agora</button>
+          <span id="countdown" class="small muted"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="summary" id="summary" aria-label="Resumo"></section>
+
+    <section class="ranking" aria-labelledby="rank-title">
+      <div class="section-head">
+        <div>
+          <h2 id="rank-title">Maiores pools de stablecoin por TVL on-chain</h2>
+          <p class="section-sub">Uniswap v3 e v4 (Ethereum, Polygon) e Orca Whirlpools (Solana). Ranking recalculado a cada leitura. <span id="rank-count"></span></p>
+        </div>
+        <div class="filters">
+          <div class="seg" role="group" aria-label="Rede">
+            <button type="button" data-filter="chain:all">Todas</button>
+            <button type="button" data-filter="chain:ethereum">Ethereum</button>
+            <button type="button" data-filter="chain:polygon">Polygon</button>
+            <button type="button" data-filter="chain:solana">Solana</button>
+          </div>
+          <div class="seg" role="group" aria-label="Protocolo">
+            <button type="button" data-filter="proto:all">Todos</button>
+            <button type="button" data-filter="proto:v3">Uniswap v3</button>
+            <button type="button" data-filter="proto:v4">Uniswap v4</button>
+            <button type="button" data-filter="proto:orca">Orca</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="rank">
+          <thead>
+            <tr>
+              <th class="c-rank">#</th>
+              <th>Pool</th>
+              <th class="num">TVL on-chain</th>
+              <th>Composição</th>
+              <th class="num">Preço · desvio</th>
+              <th>7 dias</th>
+              <th class="num">Volume 24h</th>
+              <th class="num">APR médio</th>
+              <th>Sinal</th>
+              <th class="num">Range conservador</th>
+            </tr>
+          </thead>
+          <tbody id="rank-body"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">
+        <button type="button" id="btn-showall" class="btn-ghost">Ver todas</button>
+        <p class="small muted">Preço = token base cotado no token âncora (USDC, USDT, USDS…). Valores em dólar tratam 1 token âncora como US$ 1. Clique numa linha para abrir a análise.</p>
+      </div>
+    </section>
+
+    <section class="detail" id="detail" aria-label="Análise da pool selecionada"></section>
+
+    <section class="method" aria-labelledby="method-title">
+      <h2 id="method-title">Como o radar calcula</h2>
+      <div class="method-grid">
+        <div>
+          <h3>Leitura on-chain</h3>
+          <p>O navegador consulta RPCs públicos a cada 30 segundos, sem servidor intermediário. No Uniswap v3 lemos <code>slot0</code>, <code>liquidity</code> e os saldos ERC-20 do contrato da pool. No Uniswap v4 os tokens ficam no PoolManager, então o TVL é obtido integrando a liquidez de cada tick inicializado (via StateView) num raio de ±10.000 ticks; o que passa disso é tratado como full range. Na Orca lemos a conta Whirlpool, os dois vaults SPL e os tick arrays derivados por PDA.</p>
+        </div>
+        <div>
+          <h3>Análise técnica</h3>
+          <p>Indicadores sobre 30 dias de velas de 1 hora do GeckoTerminal, que indexa os swaps on-chain das mesmas pools: médias e desvio-padrão, Bandas de Bollinger (20h, 2σ), RSI de 14h (Wilder), cruzamento de EMAs de 12h e 48h, volatilidade realizada e z-score. Somamos a isso sinais lidos on-chain: desvio do peg, composição da pool e profundidade a ±0,1% e ±0,5%.</p>
+        </div>
+        <div>
+          <h3>Ranges</h3>
+          <p>Centro na mediana de 7 dias; σ é o desvio robusto (MAD) dos fechamentos, porque pavios de pools estáveis carregam ruído de swaps de poeira. O range conservador usa a maior meia-largura entre 4σ, 1,25× o desvio extremo de 30 dias (percentis 0,5% e 99,5% dos fechamentos), 5 ticks e 10 bp. O estreito usa 2σ; o amplo usa 8σ, 1,5× o extremo absoluto e no mínimo 50 bp. Os limites são arredondados para fora até múltiplos do tick spacing e testados contra as últimas 720 horas.</p>
+        </div>
+      </div>
+      <p class="disclaimer">Conteúdo informativo e educacional. Não é recomendação de investimento. Liquidez concentrada envolve perda impermanente, risco de contrato inteligente e risco de depeg dos tokens; o APR estimado supõe volume e liquidez constantes.</p>
+      <details class="rpc">
+        <summary>Configurar RPCs</summary>
+        <p class="small muted">Use um endpoint próprio (Alchemy, Infura, Helius, QuickNode…) se os públicos estiverem lentos. O endereço fica salvo só neste navegador.</p>
+        <form id="rpc-form" class="rpc-form"></form>
+      </details>
+    </section>
+  </main>
+
+  <footer class="wrap foot small muted">Universo de 42 pools candidatas conferido on-chain em 04/10/2026. Dados de preço e TVL lidos diretamente da Ethereum, Polygon e Solana.</footer>
+
+  <script src="assets/pools.js"></script>
+  <script src="assets/onchain.js"></script>
+  <script src="assets/analysis.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
